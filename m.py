@@ -2,7 +2,7 @@
 import dearpygui.dearpygui as dpg
 from pathlib import Path
 from file_manager import FileManager
-
+import sys
 class MyApp:
     """Пример приложения с файловым менеджером"""
     
@@ -113,6 +113,11 @@ class MyApp:
         """Запускает приложение"""
         # Инициализация Dear PyGui
         dpg.create_context()
+        with dpg.font_registry():
+            with dpg.font(font_path, 18, default_font=True, tag="Default font") as f:
+                dpg.add_font_range_hint(dpg.mvFontRangeHint_Cyrillic)
+            dpg.bind_font("Default font")
+
         dpg.create_viewport(
             title="Пример использования файлового менеджера", 
             width=600, 
@@ -131,4 +136,6 @@ class MyApp:
 # Запуск приложения
 if __name__ == "__main__":
     app = MyApp()
+    base_path = sys._MEIPASS if hasattr(sys, '_MEIPASS') else '.'
+    font_path = f"{base_path}/notomono-regular.ttf"
     app.run()

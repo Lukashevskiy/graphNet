@@ -1,10 +1,12 @@
 import dearpygui.dearpygui as dpg
 from pathlib import Path
-from typing import Callable, List
-from Src.ui.components.navigation_panel import NavigationPanel
-from Src.ui.components.file_list import FileList
-from Src.ui.components.selection_panel import SelectionPanel
-from Src.models.file_item import FileItem
+from typing import Callable, List, Optional
+from .components.navigation_panel import NavigationPanel
+from .components.file_list import FileList
+from .components.selection_panel import SelectionPanel
+from ..models.file_item import FileItem
+from ..models.file_tree import FileTree
+from ..services.file_tree_service import FileSystemService
 
 class FileManagerUI:
     """Главный UI компонент файлового менеджера"""
@@ -21,9 +23,11 @@ class FileManagerUI:
         self.on_directory_open_callback = on_directory_open_callback
         self.on_selection_change_callback = on_selection_change_callback
         self.on_select_callback = on_select_callback
-        
         # Компоненты UI
-        self.navigation_panel = NavigationPanel(on_navigate_callback)
+        self.navigation_panel = NavigationPanel(
+            on_navigate_callback=self._on_navigation_navigate,
+            on_directory_select_callback=on_directory_open_callback
+        )
         self.file_list = FileList(
             on_file_open_callback, 
             on_directory_open_callback, 
@@ -36,6 +40,14 @@ class FileManagerUI:
         self.breadcrumbs_tag = "breadcrumbs_text"
         self.address_input_tag = "address_input"
         self.status_text_tag = "status_text"
+        self.main_content_tag = "main_content"
+    
+    def _on_navigation_navigate(self, path: Path) -> None:
+        """Обработчик навигации из панели навигации"""
+        # Раскрываем дерево до этого пути
+        self.navigation_panel.expand_to_path(path)
+        # Затем переходим в директорию
+        self.on_navigate_callback(path)
     
     def create(self, title: str, width: int, height: int) -> str:
         """Создает главное окно файлового менеджера"""
@@ -52,17 +64,25 @@ class FileManagerUI:
             
             # Основная область
             with dpg.group(horizontal=True):
-                self.navigation_panel.create()
-                self.file_list.create()
+                self.navigation_panel.create(parent=self.window_tag)
+                self.file_list.create(parent=self.window_tag)
             
             # Статус-бар
             dpg.add_text("Готов", tag=self.status_text_tag)
             
             # Панель выбора
-            self.selection_panel.create()
+            # self.selection_panel.create()
         
         return self.window_tag
     
+    def load_navigation_tree(self, tree: FileTree) -> None:
+        """Загружает дерево навигации"""
+        self.navigation_panel.load_navigation_tree(tree)
+    
+    def expand_navigation_to_path(self, path: Path) -> None:
+        """Раскрывает навигацию до указанного пути"""
+        self.navigation_panel.expand_to_path(path)
+            
     def _create_header(self) -> None:
         """Создает верхнюю часть интерфейса"""
         dpg.add_text("Путь: ", tag=self.breadcrumbs_tag)
@@ -127,3 +147,9 @@ class FileManagerUI:
     def update_selection_styles(self, selected_items: List[FileItem]) -> None:
         """Обновляет стили элементов списка"""
         self.file_list.update_selection_styles(selected_items)
+        
+    def load_navigation_tree(self, tree: FileTree) -> None:
+        """Загружает дерево навигации"""
+        self.current_tree = tree
+        self.navigation_panel.load_navigation_tree(tree)
+    
